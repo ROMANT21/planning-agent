@@ -12,9 +12,10 @@
         </div>
     </div>
 
-    <button @click="sendCommands(['ArrowUp', 'ArrowUp', 'ArrowUp', 'ArrowRight', 'ArrowRight', 'ArrowRight'])"></button>
+    <button @click="sendCommands(breadthFirstSearchAlg(currPos, grid))"></button>
 </template>
 <style>
+/*MOVE TO SEPERATE*/ 
 .container{
     display: flex;
 }
@@ -95,7 +96,7 @@ for (let row = 0; row < props.dim; ++row){
 var currPos: number[] = [0, 0]
 grid[currPos[0]][currPos[1]] = 1        // Set agent state
 grid[props.dim - 1][props.dim - 1] = 3  // Set goal state
-grid[1][1] = 2                          // Set obstacle state
+grid[1][0] = 2                          // Set obstacle state
 
 // Move Agent, depending on input
 var componentKey = ref(0)   // Used to force re-render
@@ -168,9 +169,79 @@ async function sendCommands(commands: string[]) {
     }
 }
 
-function depthFirstSearchAlg(currPos: number[], goalPos: number[], grid: number[][], visited: boolean[][], path: string[]) {
+function getAdjacents(currPos: number[], grid: number[][]){
+    const adjacents: number[][] = []
+
+    // Check if the agent can move up, down, left, or right
+    if (isPassable([currPos[0] + 1, currPos[1]])){
+        adjacents.push([currPos[0] + 1, currPos[1]])
+    }
+    if (isPassable([currPos[0], currPos[1] + 1])){
+        adjacents.push([currPos[0], currPos[1] + 1])
+    }
+    if (isPassable([currPos[0] - 1, currPos[1]])){
+        adjacents.push([currPos[0] - 1, currPos[1]])
+    }
+    if (isPassable([currPos[0], currPos[1] - 1])){
+        adjacents.push([currPos[0], currPos[1] - 1])
+    }
+
+    return adjacents
 }
 
-function breadthFirstSearchAlg(currPos: number[], goalPos: number[], grid: number[][], visited: boolean[][], path: string[]) {
+function breadthFirstSearchAlg(startPos: number[], grid: number[][]) {    
+    // Queue and visited array
+    const queue: number[][] = [startPos];   // Queue of positions to visit
+    const visited  = new Set()              // Set of visited positions
+    const path = new Map()             // Map of positions to their parent
+
+    // Start BFS
+    while (queue.length > 0){
+        const currPos = queue.shift() as number[];
+        const adjacents = getAdjacents(currPos, grid);
+
+        // Add adjacents to queue if it hasn't been visited
+        for (const adjacent of adjacents){
+            
+            // Set parent of adjacent
+            path.set(adjacent, currPos)  
+            
+            // Check if adjacent is goal state
+            if (grid[adjacent[0]][adjacent[1]] == 3){
+                return backtrackPath(path, adjacent)
+            }
+
+            // Add adjacent to queue if it hasn't been visited
+            if (!visited.has(adjacent.toString())){
+                visited.add(adjacent.toString())
+                queue.push(adjacent)
+            }
+        }
+    }
+    return []
+}
+
+function backtrackPath(path: Map<number[], number[]>, goalPos: number[]){
+    // Backtrack path from goal state to start state
+    let currPos = goalPos
+    let commands: string[] = []
+    while (path.has(currPos)){
+        const parent = path.get(currPos) as number[]
+        if (currPos[0] > parent[0]){
+            commands.push('ArrowRight')
+        }
+        if (currPos[0] < parent[0]){
+            commands.push('ArrowLeft')
+        }
+        if (currPos[1] > parent[1]){
+            commands.push('ArrowUp')
+        }
+        if (currPos[1] < parent[1]){
+            commands.push('ArrowDown')
+        }
+        currPos = parent
+    }
+    commands.reverse()
+    return commands
 }
 </script>
